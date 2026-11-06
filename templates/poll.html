@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.lead{font-size:20px;margin:0 0 6px}
+.engines{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 8px}
+.engine{position:relative;cursor:pointer;display:block}
+.engine input{position:absolute;opacity:0}
+.engine .face{border:3px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;transition:.15s}
+.engine img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+.engine .label{padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.engine .label b{font:700 22px Oswald,sans-serif;text-transform:uppercase}
+.engine .tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--line)}
+.engine:hover .face{border-color:#9fb2c2}
+.engine input:checked + .face{border-color:var(--accent);box-shadow:0 6px 20px rgba(200,16,46,.18)}
+.engine input:checked + .face .tick{background:var(--accent);border-color:var(--accent)}
+.engine input:focus-visible + .face{outline:3px solid #7aa7e8;outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip input{position:absolute;opacity:0}
+.chip span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip input:checked + span{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip input:focus-visible + span{outline:3px solid #7aa7e8}
+textarea,input[type=text],select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+textarea{min-height:110px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label.f{display:block;font-weight:600;margin-bottom:4px}
+.submit{margin-top:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+@media(max-width:560px){.engines{gap:10px}.engine .label b{font-size:18px}}
+</style>
+{% endblock %}
+{% block body %}
+{% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+{% if existing %}<div class="notice">You already voted <b>{{ 'Crusader' if existing.choice=='crusader' else 'MerCruiser' }}</b>. Change anything below and resubmit to update your vote.</div>{% endif %}
+
+<p class="lead"><b>If you were repowering today, which would you put in your boat?</b></p>
+<p class="muted">{{ total }} boater{{ '' if total==1 else 's' }} have voted so far.</p>
+
+<form method="post" action="{{ url_for('vote') }}">
+  <div class="engines" role="radiogroup" aria-label="Engine choice">
+    <label class="engine">
+      <input type="radio" name="choice" value="crusader" required {% if existing and existing.choice=='crusader' %}checked{% endif %}>
+      <div class="face"><img src="{{ url_for('static', filename='crusader.jpg') }}" alt="Blue Crusader 454 marine engine with heat exchanger">
+        <div class="label"><b>Crusader</b><span class="tick"></span></div></div>
+    </label>
+    <label class="engine">
+      <input type="radio" name="choice" value="mercruiser" {% if existing and existing.choice=='mercruiser' %}checked{% endif %}>
+      <div class="face"><img src="{{ url_for('static', filename='mercruiser.jpg') }}" alt="Black MerCruiser marine engine with fresh water cooling system">
+        <div class="label"><b>MerCruiser</b><span class="tick"></span></div></div>
+    </label>
+  </div>
+
+  <h2>Why? <span class="muted" style="font:400 15px 'Source Sans 3'">pick all that apply</span></h2>
+  <div class="chips">
+    {% for r in reasons %}
+    <label class="chip"><input type="checkbox" name="reasons" value="{{ r }}" {% if r in existing_reasons %}checked{% endif %}><span>{{ r }}</span></label>
+    {% endfor %}
+  </div>
+
+  <h2>In your own words</h2>
+  <textarea name="why" maxlength="1000" placeholder="Stories, horror stories, what you'd never run again…">{{ existing.why if existing and existing.why else '' }}</textarea>
+
+  <h2>About you <span class="muted" style="font:400 15px 'Source Sans 3'">optional</span></h2>
+  <div class="card grid">
+    {% macro sel(name, label, opts) %}
+    <div><label class="f" for="{{ name }}">{{ label }}</label>
+      <select id="{{ name }}" name="{{ name }}"><option value="">—</option>
+      {% for o in opts %}<option {% if existing and existing[name]==o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+      </select></div>
+    {% endmacro %}
+    {{ sel('owned', "Brands you've owned", owned) }}
+    {{ sel('boat_type', 'Drive type', boat_types) }}
+    {{ sel('water', 'Where you boat', waters) }}
+    {{ sel('experience', 'Years boating', experience) }}
+    <div><label class="f" for="region">State / region</label>
+      <input type="text" id="region" name="region" maxlength="60" value="{{ existing.region if existing and existing.region else '' }}"></div>
+    <div><label class="f" for="name">First name or handle</label>
+      <input type="text" id="name" name="name" maxlength="40" value="{{ existing.name if existing and existing.name else '' }}"></div>
+  </div>
+
+  <div class="submit">
+    <button class="btn" type="submit">{{ 'Update my vote' if existing else 'Cast my vote' }}</button>
+    <a href="{{ url_for('results') }}">See results first →</a>
+  </div>
+</form>
+{% endblock %}

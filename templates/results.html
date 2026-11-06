@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Results — Crusader vs MerCruiser{% endblock %}
+{% block head %}
+<style>
+.split{display:flex;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#e9edf0}
+.split div{display:flex;align-items:center;padding:0 16px;color:#fff;font:700 20px Oswald,sans-serif;white-space:nowrap;min-width:0}
+.cru{background:var(--cru)}.mer{background:var(--mer)}
+.legend{display:flex;justify-content:space-between;margin-top:8px;font-weight:600}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.cols{grid-template-columns:1fr}}
+.row{display:grid;grid-template-columns:1fr 2fr 32px;gap:10px;align-items:center;margin:8px 0;font-size:15px}
+.bar{height:12px;border-radius:6px;background:#e9edf0;overflow:hidden}
+.bar i{display:block;height:100%}
+.num{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+h3{font:700 18px Oswald,sans-serif;text-transform:uppercase;margin:0 0 6px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.quote{border-left:4px solid var(--line);padding:6px 14px;margin:14px 0}
+.quote.crusader{border-color:var(--cru)}.quote.mercruiser{border-color:var(--mer)}
+.quote small{color:var(--muted)}
+</style>
+{% endblock %}
+{% block body %}
+{% if voted %}<div class="notice">Thanks — your vote is in. Share this poll with other boaters.</div>{% endif %}
+{% if n == 0 %}
+  <div class="card"><p>No votes yet. <a href="{{ url_for('poll') }}">Be the first.</a></p></div>
+{% else %}
+  <p class="muted">{{ n }} vote{{ '' if n==1 else 's' }}</p>
+  <div class="split" role="img" aria-label="Crusader {{ pct.crusader }} percent, MerCruiser {{ pct.mercruiser }} percent">
+    {% if totals.crusader %}<div class="cru" style="width:{{ 100*totals.crusader/n }}%">{{ pct.crusader }}%</div>{% endif %}
+    {% if totals.mercruiser %}<div class="mer" style="width:{{ 100*totals.mercruiser/n }}%">{{ pct.mercruiser }}%</div>{% endif %}
+  </div>
+  <div class="legend"><span style="color:var(--cru)">Crusader · {{ totals.crusader }}</span><span>MerCruiser · {{ totals.mercruiser }}</span></div>
+
+  <h2>Why they chose it</h2>
+  <div class="cols">
+    {% for key, label in brands.items() %}
+    <div class="card"><h3>{{ label }}</h3>
+      {% if top[key] %}{% set mx = top[key][0][1] %}
+        {% for reason, c in top[key] %}
+        <div class="row"><span>{{ reason }}</span>
+          <div class="bar"><i class="{{ 'cru' if key=='crusader' else 'mer' }}" style="width:{{ 100*c/mx }}%"></i></div>
+          <span class="num">{{ c }}</span></div>
+        {% endfor %}
+      {% else %}<p class="muted">No votes yet.</p>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if owned_vs %}
+  <h2>Owners vs. their pick</h2>
+  <div class="card"><table>
+    <tr><th>Has owned</th><th class="n" style="text-align:right">Picked Crusader</th><th style="text-align:right">Picked MerCruiser</th></tr>
+    {% for o in owned %}{% set a = owned_vs[(o,'crusader')] %}{% set b = owned_vs[(o,'mercruiser')] %}
+      {% if a or b %}<tr><td>{{ o }}</td><td class="n">{{ a }}</td><td class="n">{{ b }}</td></tr>{% endif %}
+    {% endfor %}
+  </table></div>
+  {% endif %}
+
+  {% if comments %}
+  <h2>What boaters said</h2>
+  {% for c in comments %}
+  <div class="quote {{ c.choice }}">“{{ c.why }}”<br>
+    <small>— {{ c.name or 'Anonymous' }}{% if c.region %}, {{ c.region }}{% endif %} · picked {{ 'Crusader' if c.choice=='crusader' else 'MerCruiser' }}{% if c.boat_type %} · {{ c.boat_type }}{% endif %}{% if c.water %} · {{ c.water }} water{% endif %}</small></div>
+  {% endfor %}
+  {% endif %}
+{% endif %}
+<p style="margin-top:28px"><a class="btn" href="{{ url_for('poll') }}">Vote / change your vote</a></p>
+{% endblock %}

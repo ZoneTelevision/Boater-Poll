@@ -36,32 +36,64 @@ OWNED = ["Crusader", "MerCruiser", "Both", "Neither"]
 EXPERIENCE = ["Under 5 years", "5–15 years", "15–30 years", "30+ years"]
 
 
+# Storage: Postgres when DATABASE_URL is set (for hosting, e.g. Neon),
+# otherwise a local SQLite file (for running on your own computer).
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_PG = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+
+
+class Store:
+    """Tiny wrapper so the same SQL ('?' placeholders) runs on SQLite or Postgres."""
+
+    def __init__(self):
+        if USE_PG:
+            import psycopg
+            from psycopg.rows import dict_row
+            self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        else:
+            self.conn = sqlite3.connect(DB_PATH)
+            self.conn.row_factory = sqlite3.Row
+
+    def execute(self, sql, params=()):
+        if USE_PG:
+            sql = sql.replace("?", "%s")
+        return self.conn.execute(sql, params)
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+
 def db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
+        g.db = Store()
     return g.db
 
 
 @app.teardown_appcontext
 def close_db(_exc):
-    conn = g.pop("db", None)
-    if conn:
-        conn.close()
+    store = g.pop("db", None)
+    if store:
+        store.close()
 
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS votes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at TEXT NOT NULL,
-            voter TEXT NOT NULL UNIQUE,
-            choice TEXT NOT NULL,
-            reasons TEXT NOT NULL,
-            why TEXT,
-            boat_type TEXT, water TEXT, owned TEXT, experience TEXT,
-            region TEXT, name TEXT
-        )""")
+    id_col = "SERIAL PRIMARY KEY" if USE_PG else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    store = Store()
+    store.execute(f"""CREATE TABLE IF NOT EXISTS votes (
+        id {id_col},
+        created_at TEXT NOT NULL,
+        voter TEXT NOT NULL UNIQUE,
+        choice TEXT NOT NULL,
+        reasons TEXT NOT NULL,
+        why TEXT,
+        boat_type TEXT, water TEXT, owned TEXT, experience TEXT,
+        region TEXT, name TEXT
+    )""")
+    store.commit()
+    store.close()
 
 
 def voter_id():
@@ -97,7 +129,7 @@ def poll():
     existing = None
     if token:
         existing = db().execute("SELECT * FROM votes WHERE voter=?", (token,)).fetchone()
-    total = db().execute("SELECT COUNT(*) FROM votes").fetchone()[0]
+    total = db().execute("SELECT COUNT(*) AS n FROM votes").fetchone()["n"]
     return render_template(
         "poll.html", reasons=REASONS, boat_types=BOAT_TYPES, waters=WATERS,
         owned=OWNED, experience=EXPERIENCE, existing=existing, total=total,

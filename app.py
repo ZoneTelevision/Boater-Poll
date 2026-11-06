@@ -1,6 +1,6 @@
 """Boater Poll: Crusader vs MerCruiser.
 
-Run:  pip install flask  &&  python app.py   ->  http://localhost:5050
+Run:  pip install flask  &&  python app.py   ->  http://localhost:5077
 Admin CSV export: /export.csv?key=<POLL_ADMIN_KEY>
 """
 import csv
@@ -169,4 +169,4 @@ def export():
 init_db()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5050)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5077)), debug=False)

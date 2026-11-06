@@ -1,6 +1,6 @@
 """Boater Poll: Crusader vs MerCruiser.
 
-Run:  pip install flask  &&  python app.py   ->  http://localhost:5077
+Run:  pip install flask  &&  python app.py   -> prints the address (first free port from 8420)
 Admin CSV export: /export.csv?key=<POLL_ADMIN_KEY>
 """
 import csv
@@ -168,5 +168,20 @@ def export():
 
 init_db()
 
+def free_port(start=8420, tries=50):
+    """First port from `start` that nothing else (AirPlay, other apps) is using."""
+    import socket
+    for port in range(start, start + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("0.0.0.0", port))
+                return port
+            except OSError:
+                continue
+    raise SystemExit("No free port found; set one with PORT=xxxx python3 app.py")
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5077)), debug=False)
+    port = int(os.environ["PORT"]) if os.environ.get("PORT") else free_port()
+    print(f"\n  Boater Poll is running ->  http://localhost:{port}\n")
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -5,7 +5,7 @@ A small Flask + SQLite poll. Boaters pick Crusader or MerCruiser, tick their rea
 ## Run locally
 ```
 pip install -r requirements.txt
-python app.py            # http://localhost:5077
+python3 app.py           # prints the address to open (first free port from 8420)
 ```
 
 ## Settings (environment variables)
@@ -13,7 +13,7 @@ python app.py            # http://localhost:5077
 |---|---|---|
 | `POLL_ADMIN_KEY` | Key for the CSV export | `change-me` (**change it**) |
 | `POLL_DB` | Path to the SQLite file | `poll.db` next to app.py |
-| `PORT` | Port to listen on | `5077` |
+| `PORT` | Port to listen on | first free port from `8420` |
 
 ## Export all votes
 `/export.csv?key=YOUR_ADMIN_KEY`
